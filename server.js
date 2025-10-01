@@ -3,9 +3,9 @@ import mongoose from "mongoose";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
-app.use(cors());
 
 const app = express();
+app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 // Needed for ES Modules
