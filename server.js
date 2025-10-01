@@ -4,6 +4,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 
+// --------------------
+// Core Initialization
+// --------------------
 const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 3000;
@@ -16,19 +19,17 @@ const __dirname = path.dirname(__filename);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve frontend
+// Serve frontend: Assumes your static HTML/CSS/JS files are in a directory named 'public'
 app.use(express.static(path.join(__dirname, "public")));
 
 // --------------------
 // MongoDB Connection
 // --------------------
 mongoose
-  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/flipball", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/flipball")
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
+  // Note: useNewUrlParser and useUnifiedTopology are no longer needed in Mongoose 6+
 
 // --------------------
 // Schema & Model
@@ -45,7 +46,7 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 // --------------------
-// Routes
+// Routes (API Endpoints)
 // --------------------
 
 // Signup
@@ -73,7 +74,7 @@ app.post("/login", async (req, res) => {
     if (!user) {
       return res.json({ success: false, message: "Invalid credentials!" });
     }
-    // ✅ Instead of session → frontend will store email in localStorage
+    // Success: frontend will store email in localStorage for subsequent requests
     res.json({ success: true, message: "Login successful!", email: user.email });
   } catch (err) {
     console.error(err);
@@ -113,15 +114,16 @@ app.post("/update-balance", async (req, res) => {
   }
 });
 
-// Logout → frontend will just clear localStorage
+// Logout
 app.get("/logout", (req, res) => {
   res.json({ success: true, message: "Logged out!" });
 });
 
 // --------------------
-// Catch-all for frontend (Render needs this)
+// Catch-all for frontend (Single-Page Application Fallback)
+// FIX: Changed from app.get("*", ...) to app.get("/*", ...) to avoid PathError on some environments.
 // --------------------
-app.get("*", (req, res) => {
+app.get("/*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
