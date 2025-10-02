@@ -137,6 +137,30 @@ app.post("/addFunds", async (req, res) => {
 
 
 
+// Profile
+
+app.get("/profile", async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.json({ success: false, message: "No email provided!" });
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.json({ success: false, message: "User not found!" });
+
+    res.json({
+      success: true,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      balance: user.balance,
+      attempts: user.attempts,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
 
 // Play game
 app.post("/play", async (req, res) => {
