@@ -123,7 +123,7 @@ app.get("/logout", (req, res) => {
 // Catch-all for frontend (Single-Page Application Fallback)
 // FIX: Changed from app.get("*", ...) to app.get("/*", ...) to avoid PathError on some environments.
 // --------------------
-app.get("/*", (req, res) => {
+app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
