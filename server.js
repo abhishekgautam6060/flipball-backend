@@ -140,10 +140,9 @@ app.post("/addFunds", async (req, res) => {
 
 // Play game
 app.post("/play", async (req, res) => {
-  const email = req.session.user;
-  if (!email) return res.json({ success: false, message: "Unauthorized!" });
+  const { email, bet, choice } = req.body;
 
-  const { bet, choice } = req.body;
+  if (!email) return res.status(400).json({ success: false, message: "Missing email!" });  
 
   try {
     const user = await User.findOne({ email });
