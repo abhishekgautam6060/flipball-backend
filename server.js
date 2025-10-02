@@ -119,12 +119,10 @@ app.get("/logout", (req, res) => {
   res.json({ success: true, message: "Logged out!" });
 });
 
-// --------------------
-// Catch-all for frontend (Single-Page Application Fallback)
-// FIX: Changed from app.get("*", ...) to app.get("/*", ...) to avoid PathError on some environments.
-// --------------------
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+
+
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: "Route not found" });
 });
 
 // --------------------
