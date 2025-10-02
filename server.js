@@ -114,6 +114,106 @@ app.post("/update-balance", async (req, res) => {
   }
 });
 
+
+// Add funds
+app.post("/addFunds", async (req, res) => {
+  const { email, amount } = req.body;
+
+  if (amount < 1000) return res.json({ success: false, message: "Minimum ₹1000 required!" });
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.json({ success: false, message: "User not found" });
+
+    user.balance += amount;
+    user.attempts += 25; // increment by 25
+    await user.save();
+
+    res.json({ success: true, balance: user.balance, attempts: user.attempts });
+  } catch (err) {
+    res.json({ success: false, message: "Failed to add funds" });
+  }
+});
+
+
+
+
+// Play game
+app.post("/play", async (req, res) => {
+  const email = req.session.user;
+  if (!email) return res.json({ success: false, message: "Unauthorized!" });
+
+  const { bet, choice } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.json({ success: false });
+
+    if (user.attempts <= 0) {
+      return res.json({ success: false, message: "❌ No attempts left! Add more funds to play again." });
+    }
+    if (bet > user.balance) {
+      return res.json({ success: false, message: "Insufficient balance!" });
+    }
+
+    // user.attempts--;
+
+    // const numBoxes = 3;
+    // const blueBox = Math.floor(Math.random() * numBoxes);
+    // const win = choice === blueBox;
+    // const winAmount = win ? bet * 5 : 0;
+    // const lost = win ? 0 : bet;
+
+    // user.balance += winAmount - lost;
+    // await user.save();
+
+// Track attempt count globally per user
+if (!user.attemptCount) {
+  user.attemptCount = 0;
+}
+user.attemptCount++;
+
+// Controlled Blue Ball Logic
+let blueBox;
+if (user.attemptCount % 4 === 0) {
+  // Every 4th attempt → cycle through 0,1,2
+  const cycle = Math.floor(user.attemptCount / 4) % 3;
+  blueBox = cycle; // 0 = box1, 1 = box2, 2 = box3
+} else {
+  // Random placement for other attempts
+  const numBoxes = 3;
+  blueBox = Math.floor(Math.random() * numBoxes);
+}
+
+// Win / Lose calculation
+const win = choice === blueBox;
+const winAmount = win ? bet * 5 : 0;
+const lost = win ? 0 : bet;
+
+// Update balance & attempts
+user.balance += winAmount - lost;
+user.attempts -= 1;
+
+await user.save();
+
+    res.json({
+      success: true,
+      blueBox,
+      win,
+      winAmount,
+      lost,
+      newBalance: user.balance,
+      remainingAttempts: user.attempts
+    });
+  } catch (err) {
+    res.json({ success: false, message: "Error playing game" });
+  }
+});
+
+
+
+
+
 // Logout
 app.get("/logout", (req, res) => {
   res.json({ success: true, message: "Logged out!" });
