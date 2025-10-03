@@ -208,8 +208,7 @@ app.get("/profile", async (req, res) => {
 // Play game
 app.post("/play", async (req, res) => {
   const { email, bet, choice } = req.body;
-
-  if (!email) return res.status(400).json({ success: false, message: "Missing email!" });  
+  if (!email) return res.status(400).json({ success: false, message: "Missing email!" });
 
   try {
     const user = await User.findOne({ email });
@@ -222,48 +221,48 @@ app.post("/play", async (req, res) => {
       return res.json({ success: false, message: "Insufficient balance!" });
     }
 
-    // Decrease attempt
-    user.attempts--;
+    // Determine current attempt number (total played + 1)
+    const prevPlayed = user.totalAttemptsPlayed || 0;
+    const attemptNumber = prevPlayed + 1;
 
     const numBoxes = 3;
     let blueBox;
 
-    // Determine attempt number (total games played)
-    const totalAttempts = (user.totalAttemptsPlayed || 0) + 1;
-
-    if (totalAttempts % 2 === 0) {
-      // Even attempt → sequential blue ball
-      // (2nd -> 1, 4th -> 2, 6th -> 3, 8th -> 1 again)
-      blueBox = ((totalAttempts / 2 - 1) % numBoxes);
+    if (attemptNumber % 2 === 0) {
+      // Even attempt → follow sequence: 2,1,3,2,1,3...
+      const seq = [1, 0, 2]; // zero-based: box indexes → box# 2,1,3
+      const evenIndex = Math.floor(attemptNumber / 2) - 1; // 0 for 2nd attempt, 1 for 4th, ...
+      blueBox = seq[evenIndex % seq.length];
     } else {
       // Odd attempt → random
       blueBox = Math.floor(Math.random() * numBoxes);
     }
 
-    // Win logic
-    const win = choice === blueBox;
+    // Resolve win/loss (ensure numeric comparison)
+    const userChoice = Number(choice);
+    const win = userChoice === blueBox;
     const winAmount = win ? bet * 5 : 0;
     const lost = win ? 0 : bet;
-
     user.balance += winAmount - lost;
 
-    // Update totalAttemptsPlayed
-    user.totalAttemptsPlayed = totalAttempts;
+    // Update counters and save
+    user.totalAttemptsPlayed = attemptNumber;
+    user.attempts = user.attempts - 1;
     await user.save();
 
-    res.json({
+    return res.json({
       success: true,
-      blueBox,
+      attemptNumber,
+      blueBox,            // zero-based index (0,1,2)
       win,
       winAmount,
       lost,
       newBalance: user.balance,
-      remainingAttempts: user.attempts,
-      attemptNumber: totalAttempts
+      remainingAttempts: user.attempts
     });
   } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: "Error playing game" });
+    console.error("Play error:", err);
+    return res.json({ success: false, message: "Error playing game" });
   }
 });
 
