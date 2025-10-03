@@ -205,7 +205,7 @@ app.get("/profile", async (req, res) => {
 // });
 
 
-// Play game (1-based boxes)
+// Always exactly ONE blue ball
 app.post("/play", async (req, res) => {
   const { email, bet, choice } = req.body;
   if (!email) return res.status(400).json({ success: false, message: "Missing email!" });
@@ -221,45 +221,40 @@ app.post("/play", async (req, res) => {
       return res.json({ success: false, message: "Insufficient balance!" });
     }
 
-    // --- Configuration you can change ---
-    const numBoxes = 3;
-    // Pick the even-attempt sequence you want (1-based box numbers).
-    // Example options:
-    // const seq = [1,2,3]; // even attempts -> 2,1,3,2,1,3...
-    const seq = [2,1,3]; // matches your example: 2 -> box2, 4 -> box1, 6 -> box3, ...
-    // ------------------------------------
-
-    // Determine attempt number (previous total + 1)
+    // Track attempt number
     const prevPlayed = user.totalAttemptsPlayed || 0;
     const attemptNumber = prevPlayed + 1;
 
-    // Determine blueBox (1-based)
+    const numBoxes = 3;
     let blueBox;
+
+    // Your custom sequence for even attempts
+    const seq = [2, 1, 3]; // box numbers (1-based)
+
     if (attemptNumber % 2 === 0) {
-      const evenIndex = Math.floor(attemptNumber / 2) - 1; // 0 for 2nd attempt
-      const seqIndex = evenIndex % seq.length;
-      blueBox = seq[seqIndex];
+      // Even attempt → from sequence
+      const evenIndex = Math.floor(attemptNumber / 2) - 1;
+      blueBox = seq[evenIndex % seq.length];
     } else {
-      // odd attempt -> random 1..numBoxes
+      // Odd attempt → random 1..numBoxes
       blueBox = Math.floor(Math.random() * numBoxes) + 1;
     }
 
-    // Resolve win/loss (assume frontend sends choice as 1..numBoxes)
+    // Guarantee only one blue ball exists (the others are red by definition)
     const userChoice = Number(choice);
     const win = userChoice === blueBox;
     const winAmount = win ? bet * 5 : 0;
     const lost = win ? 0 : bet;
     user.balance += winAmount - lost;
 
-    // Update counters and save
     user.totalAttemptsPlayed = attemptNumber;
-    user.attempts = user.attempts - 1;
+    user.attempts -= 1;
     await user.save();
 
-    return res.json({
+    res.json({
       success: true,
       attemptNumber,
-      blueBox,            // 1..numBoxes
+      blueBox, // always one blue ball here
       win,
       winAmount,
       lost,
