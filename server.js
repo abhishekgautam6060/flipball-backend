@@ -269,7 +269,6 @@ app.post("/play", async (req, res) => {
 
 
 
-
 // Logout
 app.get("/logout", (req, res) => {
   res.json({ success: true, message: "Logged out!" });
