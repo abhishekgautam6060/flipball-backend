@@ -205,7 +205,7 @@ app.get("/profile", async (req, res) => {
 // });
 
 
-// Play game
+// Play game (1-based boxes)
 app.post("/play", async (req, res) => {
   const { email, bet, choice } = req.body;
   if (!email) return res.status(400).json({ success: false, message: "Missing email!" });
@@ -221,24 +221,30 @@ app.post("/play", async (req, res) => {
       return res.json({ success: false, message: "Insufficient balance!" });
     }
 
-    // Determine current attempt number (total played + 1)
+    // --- Configuration you can change ---
+    const numBoxes = 3;
+    // Pick the even-attempt sequence you want (1-based box numbers).
+    // Example options:
+    // const seq = [1,2,3]; // even attempts -> 2,1,3,2,1,3...
+    const seq = [2,1,3]; // matches your example: 2 -> box2, 4 -> box1, 6 -> box3, ...
+    // ------------------------------------
+
+    // Determine attempt number (previous total + 1)
     const prevPlayed = user.totalAttemptsPlayed || 0;
     const attemptNumber = prevPlayed + 1;
 
-    const numBoxes = 3;
+    // Determine blueBox (1-based)
     let blueBox;
-
     if (attemptNumber % 2 === 0) {
-      // Even attempt → follow sequence: 2,1,3,2,1,3...
-      const seq = [1, 0, 2]; // zero-based: box indexes → box# 2,1,3
-      const evenIndex = Math.floor(attemptNumber / 2) - 1; // 0 for 2nd attempt, 1 for 4th, ...
-      blueBox = seq[evenIndex % seq.length];
+      const evenIndex = Math.floor(attemptNumber / 2) - 1; // 0 for 2nd attempt
+      const seqIndex = evenIndex % seq.length;
+      blueBox = seq[seqIndex];
     } else {
-      // Odd attempt → random
-      blueBox = Math.floor(Math.random() * numBoxes);
+      // odd attempt -> random 1..numBoxes
+      blueBox = Math.floor(Math.random() * numBoxes) + 1;
     }
 
-    // Resolve win/loss (ensure numeric comparison)
+    // Resolve win/loss (assume frontend sends choice as 1..numBoxes)
     const userChoice = Number(choice);
     const win = userChoice === blueBox;
     const winAmount = win ? bet * 5 : 0;
@@ -253,7 +259,7 @@ app.post("/play", async (req, res) => {
     return res.json({
       success: true,
       attemptNumber,
-      blueBox,            // zero-based index (0,1,2)
+      blueBox,            // 1..numBoxes
       win,
       winAmount,
       lost,
@@ -265,7 +271,6 @@ app.post("/play", async (req, res) => {
     return res.json({ success: false, message: "Error playing game" });
   }
 });
-
 
 
 
