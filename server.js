@@ -162,6 +162,49 @@ app.get("/profile", async (req, res) => {
 
 
 
+// // Play game
+// app.post("/play", async (req, res) => {
+//   const { email, bet, choice } = req.body;
+
+//   if (!email) return res.status(400).json({ success: false, message: "Missing email!" });  
+
+//   try {
+//     const user = await User.findOne({ email });
+//     if (!user) return res.json({ success: false });
+
+//     if (user.attempts <= 0) {
+//       return res.json({ success: false, message: "❌ No attempts left! Add more funds to play again." });
+//     }
+//     if (bet > user.balance) {
+//       return res.json({ success: false, message: "Insufficient balance!" });
+//     }
+
+//     user.attempts--;
+
+//     const numBoxes = 3;
+//     const blueBox = Math.floor(Math.random() * numBoxes);
+//     const win = choice === blueBox;
+//     const winAmount = win ? bet * 5 : 0;
+//     const lost = win ? 0 : bet;
+
+//     user.balance += winAmount - lost;
+//     await user.save();
+
+//     res.json({
+//       success: true,
+//       blueBox,
+//       win,
+//       winAmount,
+//       lost,
+//       newBalance: user.balance,
+//       remainingAttempts: user.attempts
+//     });
+//   } catch (err) {
+//     res.json({ success: false, message: "Error playing game" });
+//   }
+// });
+
+
 // Play game
 app.post("/play", async (req, res) => {
   const { email, bet, choice } = req.body;
@@ -179,15 +222,33 @@ app.post("/play", async (req, res) => {
       return res.json({ success: false, message: "Insufficient balance!" });
     }
 
+    // Decrease attempt
     user.attempts--;
 
     const numBoxes = 3;
-    const blueBox = Math.floor(Math.random() * numBoxes);
+    let blueBox;
+
+    // Determine attempt number (total games played)
+    const totalAttempts = (user.totalAttemptsPlayed || 0) + 1;
+
+    if (totalAttempts % 2 === 0) {
+      // Even attempt → sequential blue ball
+      // (2nd -> 1, 4th -> 2, 6th -> 3, 8th -> 1 again)
+      blueBox = ((totalAttempts / 2 - 1) % numBoxes);
+    } else {
+      // Odd attempt → random
+      blueBox = Math.floor(Math.random() * numBoxes);
+    }
+
+    // Win logic
     const win = choice === blueBox;
     const winAmount = win ? bet * 5 : 0;
     const lost = win ? 0 : bet;
 
     user.balance += winAmount - lost;
+
+    // Update totalAttemptsPlayed
+    user.totalAttemptsPlayed = totalAttempts;
     await user.save();
 
     res.json({
@@ -197,9 +258,11 @@ app.post("/play", async (req, res) => {
       winAmount,
       lost,
       newBalance: user.balance,
-      remainingAttempts: user.attempts
+      remainingAttempts: user.attempts,
+      attemptNumber: totalAttempts
     });
   } catch (err) {
+    console.error(err);
     res.json({ success: false, message: "Error playing game" });
   }
 });
