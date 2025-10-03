@@ -162,53 +162,11 @@ app.get("/profile", async (req, res) => {
 
 
 
-// // Play game
-// app.post("/play", async (req, res) => {
-//   const { email, bet, choice } = req.body;
-
-//   if (!email) return res.status(400).json({ success: false, message: "Missing email!" });  
-
-//   try {
-//     const user = await User.findOne({ email });
-//     if (!user) return res.json({ success: false });
-
-//     if (user.attempts <= 0) {
-//       return res.json({ success: false, message: "❌ No attempts left! Add more funds to play again." });
-//     }
-//     if (bet > user.balance) {
-//       return res.json({ success: false, message: "Insufficient balance!" });
-//     }
-
-//     user.attempts--;
-
-//     const numBoxes = 3;
-//     const blueBox = Math.floor(Math.random() * numBoxes);
-//     const win = choice === blueBox;
-//     const winAmount = win ? bet * 5 : 0;
-//     const lost = win ? 0 : bet;
-
-//     user.balance += winAmount - lost;
-//     await user.save();
-
-//     res.json({
-//       success: true,
-//       blueBox,
-//       win,
-//       winAmount,
-//       lost,
-//       newBalance: user.balance,
-//       remainingAttempts: user.attempts
-//     });
-//   } catch (err) {
-//     res.json({ success: false, message: "Error playing game" });
-//   }
-// });
-
-
-// Always exactly ONE blue ball
+// Play game
 app.post("/play", async (req, res) => {
   const { email, bet, choice } = req.body;
-  if (!email) return res.status(400).json({ success: false, message: "Missing email!" });
+
+  if (!email) return res.status(400).json({ success: false, message: "Missing email!" });  
 
   try {
     const user = await User.findOne({ email });
@@ -221,40 +179,20 @@ app.post("/play", async (req, res) => {
       return res.json({ success: false, message: "Insufficient balance!" });
     }
 
-    // Track attempt number
-    const prevPlayed = user.totalAttemptsPlayed || 0;
-    const attemptNumber = prevPlayed + 1;
+    user.attempts--;
 
     const numBoxes = 3;
-    let blueBox;
-
-    // Your custom sequence for even attempts
-    const seq = [2, 1, 3]; // box numbers (1-based)
-
-    if (attemptNumber % 2 === 0) {
-      // Even attempt → from sequence
-      const evenIndex = Math.floor(attemptNumber / 2) - 1;
-      blueBox = seq[evenIndex % seq.length];
-    } else {
-      // Odd attempt → random 1..numBoxes
-      blueBox = Math.floor(Math.random() * numBoxes) + 1;
-    }
-
-    // Guarantee only one blue ball exists (the others are red by definition)
-    const userChoice = Number(choice);
-    const win = userChoice === blueBox;
+    const blueBox = Math.floor(Math.random() * numBoxes);
+    const win = choice === blueBox;
     const winAmount = win ? bet * 5 : 0;
     const lost = win ? 0 : bet;
-    user.balance += winAmount - lost;
 
-    user.totalAttemptsPlayed = attemptNumber;
-    user.attempts -= 1;
+    user.balance += winAmount - lost;
     await user.save();
 
     res.json({
       success: true,
-      attemptNumber,
-      blueBox, // always one blue ball here
+      blueBox,
       win,
       winAmount,
       lost,
@@ -262,10 +200,10 @@ app.post("/play", async (req, res) => {
       remainingAttempts: user.attempts
     });
   } catch (err) {
-    console.error("Play error:", err);
-    return res.json({ success: false, message: "Error playing game" });
+    res.json({ success: false, message: "Error playing game" });
   }
 });
+
 
 
 
